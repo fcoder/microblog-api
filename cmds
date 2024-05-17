@@ -1,0 +1,233 @@
+============
+ON LOCALHOST
+============
+
+  ------------------------------------
+  Backend Server   Execute:  flask run
+  ------------------------------------
+
+  (1) Clone code
+      git clone https://github.com/fcoder/microblog-api.git
+      The parent is a fork of Miguel's microblog-api, no change
+
+  (2) Create virtual environment and enter venv
+        cd ~/MyProjects/JS/React/Miguel/microblog-api
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        deactivate
+        source venv/bin/activate
+
+  (3) Create database and add fake posts and users (One Time)
+        flask db upgrade
+        flask fake users 10
+        flask fake posts 100
+      will generate db.sqlite files with fake users and fake posts but no user
+      registration and tokens
+
+
+  ------------------------------------------------------------------------
+  Frontend Server   Execute:  npm start, will see the Microblog in Browser
+  ------------------------------------------------------------------------
+
+  (1) Start Backend Flask API Server On Localhost
+      Start a Terminal
+        cd ~/MyProjects/JS/React/Miguel/microblog-api
+        source venv/env/activate
+        (venv) ~/MyProjects/JS/React/Miguel/react-microblog/api% flask run
+      Now the flask will run at localhost 5000 port, its api will respond to React Microblog app
+      (We don't need to use browser to view anything at localhost:5000), this backend server
+      will respond when the frontend React makes api requests to this server
+
+  (5) Run frontend React Microblog app
+      Start another Terminal
+      cd ~/MyProjects/JS/React/Miguel/react-microblog
+    * If just clone the github, there is no package-lock.json, we need to install with npm install (30 sec)
+      npm start
+         Compiled successfully!
+         You can now view react-microblog in the browser.
+         Local:            http://localhost:3000
+         On Your Network:  http://192.168.1.96:3000
+         Note that the development build is not optimized.
+         To create a production build, use npm run build.
+         webpack compiled successfully
+      In a browser, type localhost:3000 to see the front page which is microblog
+      I have registered two users: yuming and yuming_china, both with real email addr and movie char
+
+
+
+
+
+=========
+ON LINODE
+=========
+
+   Logon to Linode for React Mega project
+   ssh reactblog@chinesesong.net
+   There are two directories, for backend and frontend respectively. I do NOT need to start
+   backend and frontend servers separately, because
+   (A) Backend server will be started by systemd running gunicorn
+   (B) Frontend code only have static files, Nginx will be configured to get files from there
+
+
+   (1) Clone Frontend Code
+       ssh reactblog@chinesesong.net
+       git clone https://github.com/fcoder/react-microblog.git
+
+   (2) If I have new code or I have modified any React server code or config (such as .env),
+       build or rebuild the production build:
+         npm run build  (This will be the production SAP to be downloaded to frontend to run)
+       Should see this on the ssh screen:
+          reactblog@flask-microblog:~/react-microblog$ npm run build
+          > react-microblog@0.1.0 build
+          > react-scripts build
+          Creating an optimized production build...
+          Compiled successfully.
+          File sizes after gzip:
+          90.93 kB (-2 B)  build/static/js/main.7feb221d.js
+          32.16 kB         build/static/css/main.223cc893.css
+          1.79 kB          build/static/js/787.fa440b26.chunk.js
+          The project was built assuming it is hosted at /.
+          You can control this with the homepage field in your package.json.
+          The build folder is ready to be deployed.
+          You may serve it with a static server:
+          npm install -g serve
+          serve -s build
+          Find out more about deployment here:  https://cra.link/deployment
+       Now the frontend static code is read to be downloaded by clients via Nginx
+
+   (3) Clone Backend Code
+       git clone https://github.com/fcoder/microblog-api.git
+       My github microblog-api is a fork of Miguel's https://github.com/miguelgrinberg/microblog-api.git
+
+
+   (4) After cloning the backend code, do the following to prepare the Flask service
+      o Intall Flask and python packages
+          cd /home/reactblog/microblog-api
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip wheel  (to avoid an err related to installing flask-mail)
+          pip install -r requirements.txt
+          deactivate
+          source venv/bin/activate
+      o Initialize SQL database idb.sqlite with some users and posts
+          cd /home/reactblog/microblog-api
+          source venv/bin/activate
+          flask db upgrade
+          flask fake users 10
+          flask fake posts 100
+
+    (5a) The backend Flask API server is started by systectl deamon, with command,
+          sudo systemctl start  react-microblog
+          sudo systemctl stop   react-microblog
+          sudo systemctl status react-microblog
+        The service file is
+          /etc/systemd/system/react-microblog.service, which has the following block defining the root
+
+        Directory for the flask app and how the gunicorn to start the app
+          [Service]
+          User=reactblog
+          WorkingDirectory=/home/reactblog/react-microblog  (Path to app, do NOT add /api!)
+          ExecStart=/home/reactblog/react-microblog/api/venv/bin/gunicorn -b 127.0.0.1:8003 microblog:app
+          Restart=always
+
+        Note that venv is in above path, there is NO need to do source venv/bin/activate,
+        systemd will do that for use before running gunicorn.
+
+    (5b) If I want to run backend Flask server by hand, do the following
+          cd /home/reactblog/microblog-api
+          source venv/bin/activate
+          flask run -p 8003
+
+        Now if I user a blowser to visite reactblog.chinesesong.net and generate some api requests,
+        I should see message on the Linode ssh screen such as
+          (venv) reactblog@flask-microblog:~/microblog-api$ flask run -p 8003
+           * Serving Flask app 'microblog.py'
+           * Debug mode: on
+          WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+           * Running on http://127.0.0.1:8003
+          Press CTRL+C to quit
+           * Restarting with stat
+           * Debugger is active!
+           * Debugger PIN: 389-254-185
+          127.0.0.1 - - [17/May/2024 00:36:04] "GET /api/me HTTP/1.0" 401 -
+          127.0.0.1 - - [17/May/2024 00:36:04] "PUT /api/tokens HTTP/1.0" 200 -
+          127.0.0.1 - - [17/May/2024 00:36:04] "GET /api/me HTTP/1.0" 200 -
+          127.0.0.1 - - [17/May/2024 00:36:04] "GET /api/feed HTTP/1.0" 200 -
+          127.0.0.1 - - [17/May/2024 00:36:13] "POST /api/posts HTTP/1.0" 201 -
+
+
+    (6) The frontend React static files (index.html etc) will be download from
+          /home/reactblog/react-microblog/build
+        to clients' browsers because the following block of /etc/nginx/sites-enabled/react_microblog.nginx
+          location / {
+             try_files $uri $uri/ /index.html;
+             add_header Cache-Control "public";
+          }
+        redirects all requests from client to the backend API service localhost:8003
+        with the following 2 blocks in the same Nginx config file:
+          upstream app_microblog_api {
+             server 127.0.0.1:8003;
+          }
+          ... ...
+
+          # Flask backend
+          location /api {
+             proxy_set_header X-Real-IP $remote_addr;
+             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+             proxy_set_header Host $http_host;
+             proxy_set_header X-NginX-Proxy true;
+             proxy_set_header X-Ssl on;
+
+             include proxy_params;
+             proxy_pass http://app_microblog_api;  # Defined above
+             proxy_redirect off;
+          }
+
+         After backend flash server is running, should be able to see port 8003 with
+            sudo lsof -i -P -n | grep LISTEN
+
+         If there is any error, use this command to see error log:
+            sudo journalctl -u react-microblog.service
+
+     (7) To reload modified Nginx configuration file (Do only after making changes)
+            sudo service nginx reload
+
+     (8) To Start, Stop or Check the Server
+            sudo systemctl start   react-microblog
+            sudo systemctl stop    react-microblog
+            sudo systemctl status  react-microblog  (Look for port 8003)
+            sudo systemctl restart react-microblog
+
+     (9) It is possible to run the server manually, see sw_selfstudy for reference
+
+
+  Now, If I browser https://reactblog.chinesesong.net/, the request for the / home page will
+  be redirected by the Flask backend server to the build directory so that the SPA code will
+  be downloaded to the local browser, which will render the front page for us to logon...
+
+
+=============================================
+If see this warning, get rid of it as follows
+=============================================
+
+One of your dependencies, babel-preset-react-app, is importing the
+"@babel/plugin-proposal-private-property-in-object" package without
+declaring it in its dependencies. This is currently working because
+"@babel/plugin-proposal-private-property-in-object" is already in your
+node_modules folder for unrelated reasons, but it may break at any time.
+
+babel-preset-react-app is part of the create-react-app project, which
+is not maintained anymore. It is thus unlikely that this bug will
+ever be fixed. Add "@babel/plugin-proposal-private-property-in-object" to
+your devDependencies to work around this error. This will make this message
+go away.
+
+Do: (have done this for localhost ~/MyProjects/JS/React/Miguel/react-microblog
+   npm install --save-dev @babel/plugin-proposal-private-property-in-object --legacy-peer-deps
+Above command will add the following 3 lines into package.json:
++  },
++  "devDependencies": {
++    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+
+
